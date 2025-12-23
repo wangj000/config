@@ -67,7 +67,11 @@ require("lazy").setup({
 		"stevearc/oil.nvim",
 		---@module 'oil'
 		---@type oil.SetupOpts
-		opts = {},
+		opts = {
+			view_options = {
+				show_hidden = true,
+			},
+		},
 		dependencies = { { "nvim-mini/mini.icons", opts = {} } },
 		lazy = false,
 
@@ -113,25 +117,7 @@ require("lazy").setup({
 		end,
 	},
 
-	-- Flash.nvim (To jump to a work ('s' first couple letters))
-	{
-		"folke/flash.nvim",
-		event = "VeryLazy",
-		opts = {},
-		keys = {
-			-- basic jump like hop/easymotion using "s"
-			{
-				"s",
-				mode = { "n", "x", "o" },
-				function()
-					require("flash").jump()
-				end,
-				desc = "Flash jump",
-			},
-		},
-	},
-
-	-- Comment plugin (gco, gcc)
+	-- Comment.nvim plugin (gco, gcc)
 	{
 		"numToStr/Comment.nvim",
 		opts = {
@@ -139,28 +125,24 @@ require("lazy").setup({
 		},
 	},
 
-	-- Theme
+	-- Color Theme
 	{
-		"Mofiqul/vscode.nvim",
-		lazy = false,
-		priority = 1000,
+		"projekt0n/github-nvim-theme",
+		name = "github-theme",
+		lazy = false, -- make sure we load this during startup if it is your main colorscheme
+		priority = 1000, -- make sure to load this before all the other start plugins
 		config = function()
-			local c = require("vscode.colors").get_colors()
-
-			require("vscode").setup({
-				transparent = true,
-				italic_comments = false,
-				disable_nvim_tree_bg = true,
-				color_overrides = {
-					vscBack = "#000000",
+			require("github-theme").setup({
+				options = {
+					transparent = true,
 				},
 			})
 
-			require("vscode").load()
+			vim.cmd("colorscheme github_dark")
 		end,
 	},
 
-	-- Prettier
+	-- Prettier (formatter)
 	{
 		"stevearc/conform.nvim",
 		lazy = false,
@@ -294,33 +276,21 @@ require("lazy").setup({
 		end,
 	},
 
-	-- Codex
+	-- Animated Cursor
 	{
-		"kkrampis/codex.nvim",
-		lazy = true,
-		cmd = { "Codex", "CodexToggle" }, -- Optional: Load only on command execution
-		keys = {
-			{
-				"<leader>cc", -- Change this to your preferred keybinding
-				function()
-					require("codex").toggle()
-				end,
-				desc = "Toggle Codex popup or side-panel",
-				mode = { "n", "t" },
-			},
-		},
+		"sphamba/smear-cursor.nvim",
 		opts = {
-			keymaps = {
-				toggle = nil, -- Keybind to toggle Codex window (Disabled by default, watch out for conflicts)
-				quit = "<C-q>", -- Keybind to close the Codex window (default: Ctrl + q)
-			}, -- Disable internal default keymap (<leader>cc -> :CodexToggle)
-			border = "rounded", -- Options: 'single', 'double', or 'rounded'
-			width = 0.8, -- Width of the floating window (0.0 to 1.0)
-			height = 0.8, -- Height of the floating window (0.0 to 1.0)
-			model = nil, -- Optional: pass a string to use a specific model (e.g., 'o3-mini')
-			autoinstall = true, -- Automatically install the Codex CLI if not found
-			panel = false, -- Open Codex in a side-panel (vertical split) instead of floating window
-			use_buffer = false, -- Capture Codex stdout into a normal buffer instead of a terminal buffer
+			-- Have the smear animation between buffers
+			smear_between_buffers = true,
+
+			-- Faster smear animations
+			stiffness = 0.8,
+			trailing_stiffness = 0.6,
+			stiffness_insert_mode = 0.7,
+			trailing_stiffness_insert_mode = 0.7,
+			damping = 0.95,
+			damping_insert_mode = 0.95,
+			distance_stop_animating = 0.5,
 		},
 	},
 })
