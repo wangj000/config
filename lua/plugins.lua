@@ -129,31 +129,52 @@ require("lazy").setup({
 	},
 
 	-- Fuzzy finder
+	-- {
+	-- 	"nvim-telescope/telescope.nvim",
+	-- 	tag = "0.1.5",
+	-- 	dependencies = {
+	-- 		"nvim-lua/plenary.nvim",
+	-- 	},
+	-- 	config = function()
+	-- 		require("telescope").setup()
+	-- 	end,
+	-- },
+
+	-- New fuzzy finder (testing): fzf lua
 	{
-		"nvim-telescope/telescope.nvim",
-		tag = "0.1.5",
-		dependencies = {
-			"nvim-lua/plenary.nvim",
-		},
+		"ibhagwan/fzf-lua",
+		dependencies = { "nvim-tree/nvim-web-devicons" },
 		config = function()
-			require("telescope").setup()
+			local fzf = require("fzf-lua")
+
+			fzf.setup({ { "fzf-vim", "max-perf", "hide" } })
 		end,
 	},
 
 	-- Color Theme
 	{
-		"projekt0n/github-nvim-theme",
-		name = "github-theme",
-		lazy = false, -- make sure we load this during startup if it is your main colorscheme
-		priority = 1000, -- make sure to load this before all the other start plugins
-		config = function()
-			require("github-theme").setup({
-				options = {
-					transparent = true,
+		"catppuccin/nvim",
+		name = "catppuccin",
+		priority = 1000,
+		opts = {
+			integrations = {
+				cmp = true,
+				gitsigns = true,
+				treesitter = true,
+				notify = false,
+				alpha = true,
+				mini = {
+					enabled = true,
+					indentscope_color = "",
 				},
-			})
+				telescope = true,
+			},
+		},
+		init = function()
+			vim.cmd.colorscheme("catppuccin-mocha")
 
-			vim.cmd("colorscheme github_dark")
+			-- you can configure highlights by doing something like:
+			vim.cmd.hi("comment gui=none")
 		end,
 	},
 
@@ -180,20 +201,6 @@ require("lazy").setup({
 				},
 			})
 		end,
-	},
-
-	-- Live Server
-	{
-		"barrett-ruth/live-server.nvim",
-		build = "pnpm add -g live-server",
-		cmd = { "LiveServerStart", "LiveServerStop" },
-		config = true,
-	},
-
-	{
-		"akinsho/git-conflict.nvim",
-		version = "*",
-		config = true,
 	},
 
 	-- Comfy Numbers (for easy vertical num nav)
@@ -312,67 +319,206 @@ require("lazy").setup({
 	-- Statusline
 	{
 		"nvim-lualine/lualine.nvim",
+		config = function()
+			-- Eviline config for lualine
+			-- Author: shadmansaleh
+			-- Credit: glepnir
+			local lualine = require("lualine")
+			local colors = {
+				bg = "#1e2030",
+				fg = "#cdd6f4",
+				yellow = "#f9e2af",
+				cyan = "#89dceb",
+				darkblue = "#89b4fa",
+				green = "#a6e3a1",
+				orange = "#fab387",
+				violet = "#cba6f7",
+				magenta = "#f5c2e7",
+				blue = "#89b4fa",
+				red = "#f38ba8",
+			}
+
+			local conditions = {
+				buffer_not_empty = function()
+					return vim.fn.empty(vim.fn.expand("%:t")) ~= 1
+				end,
+				hide_in_width = function()
+					return vim.fn.winwidth(0) > 80
+				end,
+				check_git_workspace = function()
+					local filepath = vim.fn.expand("%:p:h")
+					local gitdir = vim.fn.finddir(".git", filepath .. ";")
+					return gitdir and #gitdir > 0 and #gitdir < #filepath
+				end,
+			}
+
+			-- Config
+			local config = {
+				options = {
+					-- Disable sections and component separators
+					component_separators = "",
+					section_separators = "",
+					theme = {
+						-- We are going to use lualine_c an lualine_x as left and
+						-- right section. Both are highlighted by c theme .  So we
+						-- are just setting default looks o statusline
+						normal = { c = { fg = colors.fg, bg = colors.bg } },
+						inactive = { c = { fg = colors.fg, bg = colors.bg } },
+					},
+				},
+				sections = {
+					-- these are to remove the defaults
+					lualine_a = {},
+					lualine_b = {},
+					lualine_y = {},
+					lualine_z = {},
+					-- These will be filled later
+					lualine_c = {},
+					lualine_x = {},
+				},
+				inactive_sections = {
+					-- these are to remove the defaults
+					lualine_a = {},
+					lualine_b = {},
+					lualine_y = {},
+					lualine_z = {},
+					lualine_c = {},
+					lualine_x = {},
+				},
+			}
+
+			-- Inserts a component in lualine_c at left section
+			local function ins_left(component)
+				table.insert(config.sections.lualine_c, component)
+			end
+
+			-- Inserts a component in lualine_x at right section
+			local function ins_right(component)
+				table.insert(config.sections.lualine_x, component)
+			end
+
+			ins_left({
+				function()
+					return "▊"
+				end,
+				color = { fg = colors.blue }, -- Sets highlighting of component
+				padding = { left = 0, right = 1 }, -- We don't need space before this
+			})
+
+			ins_left({
+				-- mode component
+				function()
+					return ""
+				end,
+				color = function()
+					-- auto change color according to neovims mode
+					local mode_color = {
+						n = colors.red,
+						i = colors.green,
+						v = colors.blue,
+						[""] = colors.blue,
+						V = colors.blue,
+						c = colors.magenta,
+						no = colors.red,
+						s = colors.orange,
+						S = colors.orange,
+						[""] = colors.orange,
+						ic = colors.yellow,
+						R = colors.violet,
+						Rv = colors.violet,
+						cv = colors.red,
+						ce = colors.red,
+						r = colors.cyan,
+						rm = colors.cyan,
+						["r?"] = colors.cyan,
+						["!"] = colors.red,
+						t = colors.red,
+					}
+					return { fg = mode_color[vim.fn.mode()] }
+				end,
+				padding = { right = 1 },
+			})
+
+			ins_left({
+				-- filesize component
+				"filesize",
+				cond = conditions.buffer_not_empty,
+			})
+
+			ins_left({
+				"filename",
+				cond = conditions.buffer_not_empty,
+				color = { fg = colors.magenta, gui = "bold" },
+			})
+
+			ins_left({ "location" })
+
+			ins_left({ "progress", color = { fg = colors.fg, gui = "bold" } })
+
+			ins_left({
+				"diagnostics",
+				sources = { "nvim_diagnostic" },
+				symbols = { error = " ", warn = " ", info = " " },
+				diagnostics_color = {
+					error = { fg = colors.red },
+					warn = { fg = colors.yellow },
+					info = { fg = colors.cyan },
+				},
+			})
+
+			-- Insert mid section. You can make any number of sections in neovim :)
+			-- for lualine it's any number greater then 2
+			ins_left({
+				function()
+					return "%="
+				end,
+			})
+
+			-- Add components to right sections
+			ins_right({
+				"o:encoding", -- option component same as &encoding in viml
+				fmt = string.upper, -- I'm not sure why it's upper case either ;)
+				cond = conditions.hide_in_width,
+				color = { fg = colors.green, gui = "bold" },
+			})
+
+			ins_right({
+				"fileformat",
+				fmt = string.upper,
+				icons_enabled = false, -- I think icons are cool but Eviline doesn't have them. sigh
+				color = { fg = colors.green, gui = "bold" },
+			})
+
+			ins_right({
+				"branch",
+				icon = "",
+				color = { fg = colors.violet, gui = "bold" },
+			})
+
+			ins_right({
+				"diff",
+				-- Is it me or the symbol for modified us really weird
+				symbols = { added = " ", modified = "󰝤 ", removed = " " },
+				diff_color = {
+					added = { fg = colors.green },
+					modified = { fg = colors.orange },
+					removed = { fg = colors.red },
+				},
+				cond = conditions.hide_in_width,
+			})
+
+			ins_right({
+				function()
+					return "▊"
+				end,
+				color = { fg = colors.blue },
+				padding = { left = 1 },
+			})
+
+			-- Now don't forget to initialize lualine
+			lualine.setup(config)
+		end,
 		dependencies = { "nvim-tree/nvim-web-devicons" },
-		opts = {
-			options = {
-				theme = "auto",
-				globalstatus = true, -- single statusline
-				section_separators = { left = "", right = "" },
-				component_separators = { left = "", right = "" },
-				disabled_filetypes = { "dashboard", "alpha" },
-			},
-
-			sections = {
-				lualine_a = {
-					{
-						"mode",
-						icon = "",
-					},
-				},
-
-				lualine_b = {
-					{
-						"filename",
-						path = 1, -- relative path
-						symbols = {
-							modified = " ●",
-							readonly = " ",
-							unnamed = "[No Name]",
-						},
-					},
-				},
-
-				lualine_c = {},
-
-				lualine_x = {
-					{
-						"diagnostics",
-						symbols = {
-							error = " ",
-							warn = " ",
-							info = " ",
-							hint = "󰌵 ",
-						},
-					},
-					"encoding",
-					"filetype",
-				},
-
-				lualine_y = {
-					{
-						"branch",
-						icon = "",
-					},
-				},
-
-				lualine_z = {
-					{
-						"location",
-						icon = "󰍒",
-					},
-				},
-			},
-		},
 	},
 
 	-- Comment.nvim (gcc, gco, etc)
@@ -380,6 +526,56 @@ require("lazy").setup({
 		"numToStr/Comment.nvim",
 		opts = {
 			-- add any options here
+		},
+	},
+
+	-- Flash.nvim
+	{
+		"folke/flash.nvim",
+		event = "VeryLazy",
+		---@type Flash.Config
+		opts = {},
+		keys = {
+			{
+				"s",
+				mode = { "n", "x", "o" },
+				function()
+					require("flash").jump()
+				end,
+				desc = "Flash",
+			},
+			{
+				"S",
+				mode = { "n", "x", "o" },
+				function()
+					require("flash").treesitter()
+				end,
+				desc = "Flash Treesitter",
+			},
+			{
+				"r",
+				mode = "o",
+				function()
+					require("flash").remote()
+				end,
+				desc = "Remote Flash",
+			},
+			{
+				"R",
+				mode = { "o", "x" },
+				function()
+					require("flash").treesitter_search()
+				end,
+				desc = "Treesitter Search",
+			},
+			{
+				"<c-s>",
+				mode = { "c" },
+				function()
+					require("flash").toggle()
+				end,
+				desc = "Toggle Flash Search",
+			},
 		},
 	},
 
@@ -396,5 +592,25 @@ require("lazy").setup({
 		"pmizio/typescript-tools.nvim",
 		dependencies = { "nvim-lua/plenary.nvim", "neovim/nvim-lspconfig" },
 		opts = {},
+	},
+
+	-- Tmux navigator
+	{
+		"christoomey/vim-tmux-navigator",
+		cmd = {
+			"TmuxNavigateLeft",
+			"TmuxNavigateDown",
+			"TmuxNavigateUp",
+			"TmuxNavigateRight",
+			"TmuxNavigatePrevious",
+			"TmuxNavigatorProcessList",
+		},
+		keys = {
+			{ "<c-h>", "<cmd><C-U>TmuxNavigateLeft<cr>" },
+			{ "<c-j>", "<cmd><C-U>TmuxNavigateDown<cr>" },
+			{ "<c-k>", "<cmd><C-U>TmuxNavigateUp<cr>" },
+			{ "<c-l>", "<cmd><C-U>TmuxNavigateRight<cr>" },
+			{ "<c-\\>", "<cmd><C-U>TmuxNavigatePrevious<cr>" },
+		},
 	},
 })
