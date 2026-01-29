@@ -27,6 +27,10 @@ vim.keymap.set("n", "D", vim.diagnostic.open_float, {
 	desc = "[S]how [D]iagnostic",
 })
 
+-- Split horizontal/vertical
+vim.keymap.set("n", "<leader>sv", ":vsplit<CR>", { desc = "[S]plit [v]ertical" })
+vim.keymap.set("n", "<leader>sh", ":split<CR>", { desc = "[S]plit [h]orizontal" })
+
 ------------ Plugin Mappings ------------
 
 -- Oil

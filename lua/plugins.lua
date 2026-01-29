@@ -16,15 +16,6 @@ vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
 
-	-- Mason LSP
-	{
-		"mason-org/mason-lspconfig.nvim",
-		opts = {},
-		dependencies = {
-			{ "mason-org/mason.nvim", opts = {} },
-		},
-	},
-
 	-- Auto complete
 	{
 		"saghen/blink.cmp",
@@ -52,6 +43,73 @@ require("lazy").setup({
 			fuzzy = { implementation = "prefer_rust_with_warning" },
 		},
 		opts_extend = { "sources.default" },
+	},
+
+	-- Mason
+	{
+		"williamboman/mason.nvim",
+		config = function()
+			require("mason").setup()
+		end,
+	},
+
+	-- Mason LSP
+	{
+		"williamboman/mason-lspconfig.nvim",
+		config = function()
+			require("mason-lspconfig").setup({
+				ensure_installed = {
+					"clangd",
+					"html",
+					"lua_ls",
+					"gopls",
+					"ts_ls",
+					"pyright",
+					"tailwindcss",
+				},
+			})
+		end,
+	},
+
+	-- LSP Config
+	{
+		"neovim/nvim-lspconfig",
+		config = function()
+			local capabilities = require("blink.cmp").get_lsp_capabilities()
+
+			vim.lsp.config.lua_ls = {
+				capabilities = capabilities,
+			}
+
+			vim.lsp.config.gopls = {
+				capabilities = capabilities,
+			}
+
+			vim.lsp.config.tsserver = {
+				capabilities = capabilities,
+			}
+
+			vim.lsp.config.pyright = {
+				capabilities = capabilities,
+			}
+
+			vim.lsp.config.clangd = {
+				capabilities = capabilities,
+			}
+
+			vim.lsp.config.html = {
+				capabilities = capabilities,
+			}
+
+			vim.lsp.enable({
+				"lua_ls",
+				"gopls",
+				"tsserver",
+				"pyright",
+				"clangd",
+				"html",
+			})
+		end,
 	},
 
 	-- Buffer oil tree
@@ -151,29 +209,45 @@ require("lazy").setup({
 		end,
 	},
 
-	-- Prettier (formatter)
+	-- Auto Format
 	{
 		"stevearc/conform.nvim",
 		lazy = false,
-		config = function()
-			require("conform").setup({
-				format_on_save = {
-					timeout_ms = 300,
-					lsp_fallback = true,
-				},
-				formatters_by_ft = {
-					javascript = { "prettier" },
-					javascriptreact = { "prettier" },
-					typescript = { "prettier" },
-					typescriptreact = { "prettier" },
-					json = { "prettier" },
-					html = { "prettier" },
-					css = { "prettier" },
-					markdown = { "prettier" },
-					yaml = { "prettier" },
-				},
-			})
-		end,
+		keys = {
+			{
+				"<leader>w",
+				function()
+					require("conform").format({ async = true })
+				end,
+				mode = "",
+				desc = "format buffer",
+			},
+		},
+		opts = {
+			notify_on_error = false,
+			format_after_save = function(bufnr)
+				local disable_filetypes = { c = true, cpp = true, html = true }
+				return {
+					timeout_ms = 500,
+					lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
+				}
+			end,
+			formatters_by_ft = {
+				lua = { "stylua" },
+				python = { "isort", "black" },
+				sql = { "sql_formatter", stop_after_first = true },
+				javascript = { "prettierd" },
+				typescript = { "prettierd", "biome" },
+				typescriptreact = { "prettierd", "biome" },
+				javascriptreact = { "prettierd" },
+				markdown = { "prettierd", "prettier", stop_after_first = true },
+				css = { "prettierd", "prettier", stop_after_first = true },
+				html = { "prettierd", "prettier", stop_after_first = true },
+				cpp = { "clang-format" },
+				c = { "clang-format" },
+				go = { "gofumpt" },
+			},
+		},
 	},
 
 	-- Comfy Numbers (for easy vertical num nav)
@@ -329,52 +403,10 @@ require("lazy").setup({
 			})
 
 			ins_left({
-				-- mode component
-				function()
-					return ""
-				end,
-				color = function()
-					-- auto change color according to neovims mode
-					local mode_color = {
-						n = colors.red,
-						i = colors.green,
-						v = colors.blue,
-						[""] = colors.blue,
-						V = colors.blue,
-						c = colors.magenta,
-						no = colors.red,
-						s = colors.orange,
-						S = colors.orange,
-						[""] = colors.orange,
-						ic = colors.yellow,
-						R = colors.violet,
-						Rv = colors.violet,
-						cv = colors.red,
-						ce = colors.red,
-						r = colors.cyan,
-						rm = colors.cyan,
-						["r?"] = colors.cyan,
-						["!"] = colors.red,
-						t = colors.red,
-					}
-					return { fg = mode_color[vim.fn.mode()] }
-				end,
-				padding = { right = 1 },
-			})
-
-			ins_left({
-				-- filesize component
-				"filesize",
-				cond = conditions.buffer_not_empty,
-			})
-
-			ins_left({
 				"filename",
 				cond = conditions.buffer_not_empty,
 				color = { fg = colors.magenta, gui = "bold" },
 			})
-
-			ins_left({ "location" })
 
 			ins_left({ "progress", color = { fg = colors.fg, gui = "bold" } })
 
@@ -395,21 +427,6 @@ require("lazy").setup({
 				function()
 					return "%="
 				end,
-			})
-
-			-- Add components to right sections
-			ins_right({
-				"o:encoding", -- option component same as &encoding in viml
-				fmt = string.upper, -- I'm not sure why it's upper case either ;)
-				cond = conditions.hide_in_width,
-				color = { fg = colors.green, gui = "bold" },
-			})
-
-			ins_right({
-				"fileformat",
-				fmt = string.upper,
-				icons_enabled = false, -- I think icons are cool but Eviline doesn't have them. sigh
-				color = { fg = colors.green, gui = "bold" },
 			})
 
 			ins_right({
@@ -454,13 +471,6 @@ require("lazy").setup({
 		},
 	},
 
-	-- Typescript tooling (import updates, references, etc)
-	{
-		"pmizio/typescript-tools.nvim",
-		dependencies = { "nvim-lua/plenary.nvim", "neovim/nvim-lspconfig" },
-		opts = {},
-	},
-
 	-- Tmux navigator (vim navigation for tmux panes)
 	{
 		"christoomey/vim-tmux-navigator",
@@ -496,15 +506,5 @@ require("lazy").setup({
 		event = "VeryLazy",
 		---@type Flash.Config
 		opts = {},
-		keys = {
-			{
-				"fj",
-				mode = { "n", "x", "o" },
-				function()
-					require("flash").jump()
-				end,
-				desc = "Flash",
-			},
-		},
 	},
 })
